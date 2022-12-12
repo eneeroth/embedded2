@@ -43,7 +43,7 @@ def read_temp():
     temp_c = ''
 
     while True:
-        start_time = time.time()
+        start_time = str(time.time())
         # Get information from module
         lines = read_temp_raw()
         
@@ -61,8 +61,8 @@ def read_temp():
             end_time = time.time()
             temp_c = str((float(temp_string) / 1000.0))
 
-            timestamp = str((end_time - start_time))
-            temp_c = temp_c + '|' + timestamp
+            #timestamp = str((end_time - start_time))
+            temp_c = temp_c + '|' + start_time
 
         time.sleep(1)
         
@@ -95,8 +95,9 @@ def main():
     
     # First loop control
     first_loop = True
+    message_sent = 0
     try:
-        while True:
+        while message_sent < 100:
             """ Read temperature and send it to master""" 
 
             if first_loop:
@@ -105,19 +106,29 @@ def main():
                 time.sleep(2)
 
             # Get latest temp and timestamp since reading
-            temp_c, timestamp = temp_c.split('|')
+            temp_c, timestamp_temperature = temp_c.split('|')
             
             if temp_c:
                 # Send value
-                print(f'[SENDING] VALUE: {temp_c} | TIME SINCE POLL: {timestamp}')
-                s.send(bytes(temp_c, 'UTF-8'))
+                print(f'[SENDING] VALUE: {temp_c}')
+                #temp_c = str(temp_c)
             
+                # Message (temp|start_time_system|start_time_network)
+                message = (temp_c + '|' + timestamp_temperature + '|' + str(time.time()))
+                s.send(bytes(message, 'UTF-8'))
+
+            message_sent += 1 
             time.sleep(2)
+       
+        s.send(bytes('quit|None|None', 'UTF-8'))
+        s.close()
+        quit()
 
     except KeyboardInterrupt:
         # Send quit message
         s.send(bytes('quit', 'UTF-8'))
         s.close()
+        quit()
 
 
 if __name__ == '__main__':
